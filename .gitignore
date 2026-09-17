@@ -1,0 +1,8 @@
+.venv/
+data/
+logs/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+results/**/*.json
+!results/baseline/summary.txt
