@@ -65,13 +65,17 @@ def load_contents(path, dataset, limit=None):
 
 
 def to_buffer(contents):
-    """Flatten to a single uint8 buffer + int64 line offsets, for H2D copy."""
-    buf = bytearray()
-    offs = [0]
-    for c in contents:
-        buf += c.encode("utf-8", "ignore") + b"\n"
-        offs.append(len(buf))
-    return np.frombuffer(bytes(buf), np.uint8), np.asarray(offs, np.int64)
+    """Flatten to a single uint8 buffer + int64 line offsets, for H2D copy.
+
+    One join + one vectorised prefix sum instead of a per-line Python loop.
+    """
+    enc = [c.encode("utf-8", "ignore") for c in contents]
+    blob = b"\n".join(enc) + b"\n"
+    lens = np.fromiter((len(e) + 1 for e in enc), np.int64, len(enc))
+    offs = np.empty(len(enc) + 1, np.int64)
+    offs[0] = 0
+    np.cumsum(lens, out=offs[1:])
+    return np.frombuffer(blob, np.uint8), offs
 
 
 # Same regexes the Drain benchmark applies before parsing (logpai/logparser).
