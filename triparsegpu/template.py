@@ -3,7 +3,7 @@ import cupy as cp
 import numpy as np
 from triparsegpu.compile import kernel
 
-_TPB = 128
+_TPB = 256
 
 
 def consensus(tok_hash, line_tok_offs, line_tok_count, label, contents):
@@ -26,10 +26,19 @@ def consensus(tok_hash, line_tok_offs, line_tok_count, label, contents):
     max_len = int(comp_len.max()) if ncomp else 1
 
     tpl_hash = cp.zeros(ncomp * max_len, cp.uint64)
-    k = kernel("template", "consensus")
-    k((ncomp,), (_TPB,), (tok_hash, line_tok_offs, comp_order,
-                          comp_start, comp_end, comp_len,
-                          cp.int32(max_len), tpl_hash))
+    comp_of_sorted = cp.cumsum(newc, dtype=cp.int64) - 1      # component id per sorted position
+
+    k_init = kernel("template", "consensus_init")
+    n_init = ncomp * max_len
+    k_init(((n_init + _TPB - 1) // _TPB,), (_TPB,),
+           (tok_hash, line_tok_offs, comp_order, comp_start, comp_len,
+            cp.int64(ncomp), cp.int32(max_len), tpl_hash))
+
+    k_red = kernel("template", "consensus_reduce")
+    n_red = nlines * max_len
+    k_red(((n_red + _TPB - 1) // _TPB,), (_TPB,),
+          (tok_hash, line_tok_offs, comp_order, comp_of_sorted, comp_len,
+           cp.int64(nlines), cp.int32(max_len), tpl_hash))
 
     # materialise template text on the host from one representative line each
     th = tpl_hash.get().reshape(ncomp, max_len)
