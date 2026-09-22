@@ -1,7 +1,7 @@
-# TriParseGPU — Execution Runbook
+# TriParseGPU - Execution Runbook
 
 Approved by Prof. Binod Kumar, 16 Sep 2026. Four members. Start date: 18 Sep 2026.
-Machine: RTX PRO 6000 Blackwell Max-Q, 96 GB — **shared with other running projects**, so every rule below about screen sessions and GPU etiquette is load-bearing.
+Machine: RTX PRO 6000 Blackwell Max-Q, 96 GB - **shared with other running projects**, so every rule below about screen sessions and GPU etiquette is load-bearing.
 
 ---
 
@@ -9,14 +9,14 @@ Machine: RTX PRO 6000 Blackwell Max-Q, 96 GB — **shared with other running pro
 
 Other work (vLLM servers, serving experiments) already sits on this card. TriParseGPU must not kill them, and their memory must not corrupt your benchmark numbers.
 
-**Rule 1 — Know what's running before you launch.**
+**Rule 1 - Know what's running before you launch.**
 
 ```bash
 nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
 nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv
 ```
 
-**Rule 2 — Cap your memory so you can't starve a serving process.**
+**Rule 2 - Cap your memory so you can't starve a serving process.**
 CuPy honours a pool limit. Put this at the top of every driver script, or export it:
 
 ```bash
@@ -28,13 +28,13 @@ import cupy as cp
 cp.get_default_memory_pool().set_limit(size=40 * 1024**3)
 ```
 
-**Rule 3 — Never lock clocks while someone else is benchmarking.**
-`nvidia-smi -lgc` is global. Coordinate before the paper sweep (Step 8); it is the only time you need it. Same for MPS — don't enable it.
+**Rule 3 - Never lock clocks while someone else is benchmarking.**
+`nvidia-smi -lgc` is global. Coordinate before the paper sweep (Step 8); it is the only time you need it. Same for MPS - don't enable it.
 
-**Rule 4 — Never run `ncu` on a busy GPU.**
+**Rule 4 - Never run `ncu` on a busy GPU.**
 Nsight Compute serialises and replays kernels; it will wreck any concurrent job's latency. Profiling happens in a booked window only (Step 9).
 
-**Rule 5 — Free memory when idle.** Long-lived Python sessions hold the pool. Exit the REPL or call `cp.get_default_memory_pool().free_all_blocks()` before stepping away.
+**Rule 5 - Free memory when idle.** Long-lived Python sessions hold the pool. Exit the REPL or call `cp.get_default_memory_pool().free_all_blocks()` before stepping away.
 
 ---
 
@@ -46,9 +46,9 @@ Everything long-running goes in a named screen. Naming convention `tpg_<purpose>
 |---|---|---|---|
 | `tpg_setup` | toolkit install, pip installs | 30–60 min | yes |
 | `tpg_data` | LogHub download + extraction | 1–3 h | yes |
-| `tpg_drain3` | Tier-0 CPU baseline on full datasets | **8–40 h** (Thunderbird) | yes — must be screened |
+| `tpg_drain3` | Tier-0 CPU baseline on full datasets | **8–40 h** (Thunderbird) | yes - must be screened |
 | `tpg_dev` | interactive kernel work, pytest | ongoing | yes |
-| `tpg_bench` | the locked-clock sweep | 2–6 h | yes — must be screened |
+| `tpg_bench` | the locked-clock sweep | 2–6 h | yes - must be screened |
 | `tpg_prof` | ncu / nsys / bpftrace runs | 1–2 h | yes |
 | `tpg_watch` | `watch nvidia-smi` + dcgmi dmon | always on | yes |
 
@@ -64,7 +64,7 @@ screen -S tpg_drain3 -X quit  # kill
 screen -dmS tpg_bench bash -c 'cd ~/triparsegpu && bash bench/run_all.sh 2>&1 | tee logs/bench.log'
 ```
 
-Always `tee` to a log file — screen's scrollback is finite and you will want the output for the paper.
+Always `tee` to a log file - screen's scrollback is finite and you will want the output for the paper.
 
 Enable screen logging once, in `~/.screenrc`:
 
@@ -80,7 +80,7 @@ deflog on
 
 ```mermaid
 gantt
-    title TriParseGPU — approved plan
+    title TriParseGPU - approved plan
     dateFormat YYYY-MM-DD
     section Week 1
     Toolkit + env + data (all)              :a1, 2026-09-18, 4d
@@ -104,7 +104,7 @@ gantt
 
 ---
 
-## 3. Day 1 — Setup (`tpg_setup`)
+## 3. Day 1 - Setup (`tpg_setup`)
 
 ```bash
 screen -S tpg_setup
@@ -129,7 +129,7 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> ~/.bashr
 source ~/.bashrc && nvcc --version
 ```
 
-Do **not** `apt upgrade` the driver — that would need a GPU reset and kill every other project's process.
+Do **not** `apt upgrade` the driver - that would need a GPU reset and kill every other project's process.
 
 Isolated Python env (never touch the vLLM env):
 
@@ -152,14 +152,14 @@ Detach: `Ctrl-A D`.
 
 ---
 
-## 4. Day 1–2 — Data (`tpg_data`)
+## 4. Day 1–2 - Data (`tpg_data`)
 
 ```bash
 screen -S tpg_data
 cd ~/triparsegpu
 ```
 
-Full LogHub sets are already on the box from TriCalRAG — symlink, don't re-download:
+Full LogHub sets are already on the box from TriCalRAG - symlink, don't re-download:
 
 ```bash
 ls ~/datasets/loghub                     # confirm the path first
@@ -187,9 +187,9 @@ print(df.columns.tolist()); print(df[['Content','EventTemplate']].head())"
 
 ---
 
-## 5. Day 2–6 — Tier 0 baseline (`tpg_drain3`) ← **the long one**
+## 5. Day 2–6 - Tier 0 baseline (`tpg_drain3`) ← **the long one**
 
-This is pure CPU, so it can run alongside everything else. Thunderbird at ~100k lines/s is over 30 hours — it must be screened, and start it early because every speedup number divides by it.
+This is pure CPU, so it can run alongside everything else. Thunderbird at ~100k lines/s is over 30 hours - it must be screened, and start it early because every speedup number divides by it.
 
 ```bash
 screen -S tpg_drain3
@@ -206,7 +206,7 @@ for D in BGL HDFS Thunderbird OpenStack; do
 done
 ```
 
-Then the full sets, smallest first, one at a time (don't parallelise — you're measuring single-thread throughput):
+Then the full sets, smallest first, one at a time (don't parallelise - you're measuring single-thread throughput):
 
 ```bash
 nice -n 10 python -m triparsegpu.ref_drain3 data/full/OpenStack/openstack_normal2.log --raw 2>&1 | tee logs/drain3_openstack.log
@@ -226,7 +226,7 @@ go install github.com/faceair/drain3-go/...@latest   # or the port you pick; ver
 
 ---
 
-## 6. Weeks 2–3 — Tier 1 development (`tpg_dev`)
+## 6. Weeks 2–3 - Tier 1 development (`tpg_dev`)
 
 ```bash
 screen -S tpg_dev
@@ -234,7 +234,7 @@ cd ~/triparsegpu && source .venv/bin/activate
 export CUPY_GPU_MEMORY_LIMIT=40GB
 ```
 
-Build order — each step has a test that must pass before the next starts:
+Build order - each step has a test that must pass before the next starts:
 
 | Order | Component | Owner | Test |
 |---|---|---|---|
@@ -247,7 +247,7 @@ Build order — each step has a test that must pass before the next starts:
 | 7 | `kernels/template.cu` | Jeenal | consensus matches a Python reference per component |
 | 8 | `metrics.py` | Sharvan | GA/PA reproduce published Drain3 numbers on the 2k sets |
 
-Work on the 2k sets only during development — they run in seconds and use almost no GPU memory, so your teammates never notice you're there.
+Work on the 2k sets only during development - they run in seconds and use almost no GPU memory, so your teammates never notice you're there.
 
 ```bash
 pytest -q tests/ 2>&1 | tee logs/tests_$(date +%F).log
@@ -264,7 +264,7 @@ print(len(t),'templates'); print(T)"
 
 ---
 
-## 7. Weeks 4–5 — Tier 2 kernels (`tpg_dev`)
+## 7. Weeks 4–5 - Tier 2 kernels (`tpg_dev`)
 
 Three replacements, each gated by its own test:
 
@@ -278,7 +278,7 @@ Keep tier 1 working the whole time. Every benchmark runs both tiers; if tier 2 r
 
 ---
 
-## 8. Week 6 — Accuracy gate (`tpg_dev`) — **do not skip**
+## 8. Week 6 - Accuracy gate (`tpg_dev`) - **do not skip**
 
 ```bash
 pytest -q tests/test_pipeline_accuracy.py -s 2>&1 | tee logs/accuracy_gate.log
@@ -288,7 +288,7 @@ Pass condition: GA and PA within 1 point of Drain3 on all four 2k sets, Drain3 p
 
 ---
 
-## 9. Week 7 — Benchmark sweep (`tpg_bench`) — **book the GPU first**
+## 9. Week 7 - Benchmark sweep (`tpg_bench`) - **book the GPU first**
 
 Message your other projects. This window needs exclusive use for clean numbers.
 
@@ -310,7 +310,7 @@ watch -n 2 nvidia-smi
 dcgmi dmon -e 1002,1003,1005,1009,1010,155 -d 100 | tee results/dcgm/sweep.csv
 ```
 
-When it finishes — **always unlock**:
+When it finishes - **always unlock**:
 
 ```bash
 sudo nvidia-smi -rgc
@@ -320,7 +320,7 @@ Thunderbird runs twice: single-batch (all 211M lines resident) and 16M-line stre
 
 ---
 
-## 10. Week 7 — Profiling (`tpg_prof`) — exclusive window too
+## 10. Week 7 - Profiling (`tpg_prof`) - exclusive window too
 
 Three layers, in increasing intrusiveness:
 
@@ -328,7 +328,7 @@ Three layers, in increasing intrusiveness:
 screen -S tpg_prof
 cd ~/triparsegpu && source .venv/bin/activate
 
-# A — eBPF (safe even with others running)
+# A - eBPF (safe even with others running)
 CUDALIB=$(ldconfig -p | awk '/libcuda.so.1 /{print $NF; exit}')
 sudo bpftrace scripts/ebpf/cuda_launch_latency.bt \
   -c "python bench/parsebench.py --dataset BGL --tier 2 --limit 1000000 --reps 1 --out /tmp/x.json" \
@@ -337,21 +337,21 @@ sudo bpftrace scripts/ebpf/cuda_sync_stalls.bt \
   -c "python bench/parsebench.py --dataset BGL --tier 2 --limit 1000000 --reps 1 --out /tmp/x.json" \
   2>&1 | tee logs/ebpf_sync.log
 
-# B — DCGM (safe)
+# B - DCGM (safe)
 dcgmi dmon -e 1002,1003,1005,1009,1010 -d 100 > results/dcgm/BGL_t2.csv &
 python bench/parsebench.py --dataset BGL --tier 2 --limit 10000000 --reps 3 --out /tmp/x.json
 kill %1
 
-# C — Nsight Compute (EXCLUSIVE — kills concurrent jobs' latency)
+# C - Nsight Compute (EXCLUSIVE - kills concurrent jobs' latency)
 nvidia-smi --query-compute-apps=pid,process_name --format=csv    # must be empty
 bash scripts/profile.sh BGL 2 1000000 2>&1 | tee logs/ncu.log
 ```
 
-Layer C needs `NVreg_RestrictProfilingToAdminUsers=0`, which requires a reboot — schedule it when nothing else is running, or run `ncu` under `sudo` if your driver build allows it.
+Layer C needs `NVreg_RestrictProfilingToAdminUsers=0`, which requires a reboot - schedule it when nothing else is running, or run `ncu` under `sudo` if your driver build allows it.
 
 ---
 
-## 11. Week 8 — Figures, report, release (`tpg_dev`)
+## 11. Week 8 - Figures, report, release (`tpg_dev`)
 
 ```bash
 GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | tr ' ' '_')
@@ -378,7 +378,7 @@ kill <pid>            # graceful first
 nvidia-smi            # confirm memory released
 ```
 
-Never `nvidia-smi --gpu-reset` on this box — it takes down every other project.
+Never `nvidia-smi --gpu-reset` on this box - it takes down every other project.
 
 ---
 
@@ -390,4 +390,4 @@ Friday, 30 minutes, four items:
 3. Blockers needing an exclusive GPU window.
 4. Which paper section each person's work has landed in.
 
-Keep a `PROGRESS.md` in the repo with these — it becomes the course report's timeline section for free.
+Keep a `PROGRESS.md` in the repo with these - it becomes the course report's timeline section for free.
