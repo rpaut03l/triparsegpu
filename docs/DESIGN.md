@@ -1,6 +1,6 @@
 # TriParseGPU
 
-**GPU-Native Log Template Mining for Large-Scale System Logs — Python-driven edition**
+**GPU-Native Log Template Mining for Large-Scale System Logs - Python-driven edition**
 
 GPU Programming · M.Tech (AI) · IIT Jodhpur · Prof. Binod Kumar
 Team: Rohit Patel (G25AIT2089) · Jeenal Chaudhary (G25AIT2027) · Kosuru Yuvaraj (G25AIT2054) · Sharvan Vittala (G25AIT2099)
@@ -13,7 +13,7 @@ Repo: `rpaut03l/triparsegpu` · BibTeX key `rohitpatel2026triparsegpu` · prior 
 
 Every log-analysis and AIOps pipeline starts by turning raw log lines like
 `connected to 10.0.0.7 port 22` and `connected to 10.0.0.9 port 22`
-into a *template* `connected to <*> port <*>` plus its parameters. The standard algorithm is **Drain** (fixed-depth parse tree + token similarity). Every implementation — Drain3 (Python), the Go and C# ports — is single-threaded CPU code doing roughly 50k–200k lines/s. Production systems produce billions of lines a day, and every LLM-on-logs paper (including our own TriCalRAG) waits on this step.
+into a *template* `connected to <*> port <*>` plus its parameters. The standard algorithm is **Drain** (fixed-depth parse tree + token similarity). Every implementation - Drain3 (Python), the Go and C# ports - is single-threaded CPU code doing roughly 50k–200k lines/s. Production systems produce billions of lines a day, and every LLM-on-logs paper (including our own TriCalRAG) waits on this step.
 
 **Gap:** no GPU implementation of template mining exists. The only GPU log work is regex filtering (RAPIDS, 2019).
 
@@ -27,9 +27,9 @@ into a *template* `connected to <*> port <*>` plus its parameters. The standard 
 
 Three tiers, as Sir's P7 requires (hand-written vs library primitives):
 
-- **Tier 0** — Drain3 on CPU (the reference and the baseline)
-- **Tier 1** — GPU pipeline using library primitives (`cupy.sort`, `cupy.cumsum`, CUB via CuPy)
-- **Tier 2** — GPU pipeline with hand-written radix sort, Blelloch/decoupled-lookback scan, and union-find CCL kernels
+- **Tier 0** - Drain3 on CPU (the reference and the baseline)
+- **Tier 1** - GPU pipeline using library primitives (`cupy.sort`, `cupy.cumsum`, CUB via CuPy)
+- **Tier 2** - GPU pipeline with hand-written radix sort, Blelloch/decoupled-lookback scan, and union-find CCL kernels
 
 The "Tri": three problems, three tiers, three contributions (parser, batch-Drain formulation, benchmark).
 
@@ -136,7 +136,7 @@ flowchart TD
     S10 --> S11[11. Report, paper, arXiv, release]
 ```
 
-### Step 1 — CUDA toolkit (once)
+### Step 1 - CUDA toolkit (once)
 
 ```bash
 nvidia-smi --query-gpu=name,driver_version,compute_cap,memory.total --format=csv
@@ -148,7 +148,7 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> ~/.bashr
 source ~/.bashrc && nvcc --version
 ```
 
-### Step 2 — Python environment
+### Step 2 - Python environment
 
 ```bash
 git clone git@github.com:rpaut03l/triparsegpu.git && cd triparsegpu
@@ -158,7 +158,7 @@ pip install cupy-cuda13x numpy pandas matplotlib pyyaml pytest drain3 regex tqdm
 python -c "import cupy, drain3; print(cupy.__version__)"
 ```
 
-### Step 3 — Data
+### Step 3 - Data
 
 `scripts/get_data.sh`:
 
@@ -166,7 +166,7 @@ python -c "import cupy, drain3; print(cupy.__version__)"
 #!/usr/bin/env bash
 set -e
 mkdir -p data/full data/2k
-# Full datasets (already on this machine from TriCalRAG — symlink instead of re-downloading)
+# Full datasets (already on this machine from TriCalRAG - symlink instead of re-downloading)
 # Zenodo record 8196385: BGL.tar.gz, HDFS_v1.zip, Thunderbird.tar.gz, OpenStack.tar.gz
 ln -sfn ~/datasets/loghub data/full
 # LogHub-2k with ground-truth templates (parsing benchmark standard)
@@ -177,11 +177,11 @@ done
 ls data/2k/*/*_2k.log_structured.csv
 ```
 
-The `_structured.csv` files carry `Content` and `EventTemplate` columns — that's the accuracy ground truth. Also grab LogHub-2.0 (Zenodo, 2023) later for the larger annotated sets; the paper is stronger with both.
+The `_structured.csv` files carry `Content` and `EventTemplate` columns - that's the accuracy ground truth. Also grab LogHub-2.0 (Zenodo, 2023) later for the larger annotated sets; the paper is stronger with both.
 
 Line counts you'll be reporting throughput on: BGL ≈ 4.7M, HDFS ≈ 11.2M, Thunderbird ≈ 211M, OpenStack ≈ 0.2M.
 
-### Step 4 — Tier 0: Drain3 baseline
+### Step 4 - Tier 0: Drain3 baseline
 
 `triparsegpu/ref_drain3.py`:
 
@@ -218,17 +218,17 @@ if __name__ == "__main__":
 for D in BGL HDFS Thunderbird OpenStack; do
   python -m triparsegpu.ref_drain3 data/2k/$D/${D}_2k.log_structured.csv
 done
-# then the full-size baseline (this is slow — that's the point; run in screen)
+# then the full-size baseline (this is slow - that's the point; run in screen)
 screen -S drain3_full python -m triparsegpu.ref_drain3 data/full/BGL/BGL.log --raw
 ```
 
 Record lines/s per dataset. This is the number every later table divides by.
 
-### Step 5 — Tier 1: GPU pipeline with library primitives
+### Step 5 - Tier 1: GPU pipeline with library primitives
 
 Stages 1–7 in Python + CuPy, using `cupy.cumsum`, `cupy.argsort`, and small custom kernels only where no primitive exists (similarity, consensus). This tier proves the *formulation* before the hand-written kernels exist.
 
-`triparsegpu/io.py` — LogHub header stripping (per-dataset format strings from logparser), result is a single `bytes` buffer plus line offsets:
+`triparsegpu/io.py` - LogHub header stripping (per-dataset format strings from logparser), result is a single `bytes` buffer plus line offsets:
 
 ```python
 import re, numpy as np
@@ -277,7 +277,7 @@ def tokenize(buf_gpu: cp.ndarray, line_offs: cp.ndarray):
     return tok_starts, tok_end, tok_line, line_tok_count, line_tok_offs
 ```
 
-`kernels/hash.cu` (stage 2 — custom kernel in both tiers; no library primitive does this):
+`kernels/hash.cu` (stage 2 - custom kernel in both tiers; no library primitive does this):
 
 ```cuda
 #include "common.cuh"
@@ -323,7 +323,7 @@ def sort_lines(key, tier=1):
     return order, seg_start, seg_end
 ```
 
-`kernels/similarity.cu` (stage 5 — Drain similarity inside a bucket; edge if sim ≥ st):
+`kernels/similarity.cu` (stage 5 - Drain similarity inside a bucket; edge if sim ≥ st):
 
 ```cuda
 #include "common.cuh"
@@ -358,7 +358,7 @@ extern "C" __global__ void similarity_edges(const unsigned long long* __restrict
 }
 ```
 
-`kernels/ccl.cu` (stage 6 — P3: label propagation with pointer jumping; clusters = components):
+`kernels/ccl.cu` (stage 6 - P3: label propagation with pointer jumping; clusters = components):
 
 ```cuda
 extern "C" __global__ void ccl_init(long long* label, long long n) {
@@ -380,9 +380,9 @@ extern "C" __global__ void ccl_compress(long long* __restrict__ label, long long
 }
 ```
 
-Host loop in `cluster.py`: `init → repeat { changed=0; hook; compress } until changed==0`. Convergence flag is one int read back — no array transfer, exactly as Sir's P3 requires.
+Host loop in `cluster.py`: `init → repeat { changed=0; hook; compress } until changed==0`. Convergence flag is one int read back - no array transfer, exactly as Sir's P3 requires.
 
-`kernels/template.cu` (stage 7 — consensus: token position kept if all lines in the component agree, else `<*>`):
+`kernels/template.cu` (stage 7 - consensus: token position kept if all lines in the component agree, else `<*>`):
 
 ```cuda
 // lines sorted by component id; one block per component. Each thread owns token positions k, k+blockDim...
@@ -425,7 +425,7 @@ python -c "from triparsegpu.pipeline import parse; t,i,T=parse('data/2k/HDFS/HDF
 pytest -q tests/test_tokenize.py tests/test_ccl.py
 ```
 
-### Step 6 — Tier 2: hand-written sort, scan, CCL
+### Step 6 - Tier 2: hand-written sort, scan, CCL
 
 Replace the three library calls with course kernels:
 
@@ -462,16 +462,16 @@ extern "C" __global__ void radix_scatter(const unsigned long long* __restrict__ 
 }
 ```
 
-The naive in-block ranking loop is O(256) per thread — fine for correctness first; the tier-2 optimisation is a 4-bit / one-hot scan ranking, which is the part worth writing up.
+The naive in-block ranking loop is O(256) per thread - fine for correctness first; the tier-2 optimisation is a 4-bit / one-hot scan ranking, which is the part worth writing up.
 
 ```bash
 pytest -q tests/test_sort.py         # exact match vs numpy stable argsort, incl. duplicate keys (stability)
 pytest -q tests/test_ccl.py          # vs scipy.sparse.csgraph.connected_components
 ```
 
-### Step 7 — Accuracy gate (do not benchmark before this passes)
+### Step 7 - Accuracy gate (do not benchmark before this passes)
 
-`triparsegpu/metrics.py` — standard log-parsing metrics (Zhu et al. 2019; Jiang et al. 2023):
+`triparsegpu/metrics.py` - standard log-parsing metrics (Zhu et al. 2019; Jiang et al. 2023):
 
 ```python
 import pandas as pd
@@ -495,13 +495,13 @@ def drain3_parity(d3_ids, gpu_ids):                  # agreement with the CPU re
     return adjusted_rand_score(d3_ids, gpu_ids)
 ```
 
-`tests/test_pipeline_accuracy.py` runs every 2k set through tier 0/1/2 and asserts GA and PA within 1 point of Drain3, and `drain3_parity ≥ 0.95`. Report all four datasets in a table regardless of pass/fail — a dataset where batch-CCL beats sequential Drain (order-independence) is a *result*.
+`tests/test_pipeline_accuracy.py` runs every 2k set through tier 0/1/2 and asserts GA and PA within 1 point of Drain3, and `drain3_parity ≥ 0.95`. Report all four datasets in a table regardless of pass/fail - a dataset where batch-CCL beats sequential Drain (order-independence) is a *result*.
 
 ```bash
 pytest -q tests/test_pipeline_accuracy.py -s
 ```
 
-### Step 8 — Benchmark sweep on full datasets
+### Step 8 - Benchmark sweep on full datasets
 
 `bench/parsebench.py`:
 
@@ -552,27 +552,27 @@ screen -S parsebench bash bench/run_all.sh
 sudo nvidia-smi -rgc
 ```
 
-Thunderbird (211M lines, ~30 GB raw) fits in 96 GB as one batch; also run it in 16M-line batches to show the streaming mode — both numbers go in the paper.
+Thunderbird (211M lines, ~30 GB raw) fits in 96 GB as one batch; also run it in 16M-line batches to show the streaming mode - both numbers go in the paper.
 
 Timing rule: `lines_per_s` excludes CPU file read and header regex; report `load_cpu` separately and say so. The paper's honest headline is *GPU parse throughput*; the end-to-end number with I/O is a second column.
 
-### Step 9 — Profiling, three layers
+### Step 9 - Profiling, three layers
 
 Same stack and same reasoning as TriCluster: eBPF (bpftrace/BCC/bpftool) sees the host side and is production-safe; DCGM sees coarse device counters and is production-safe; Nsight Compute sees per-kernel counters and is research-box only.
 
 ```bash
-# Layer A — eBPF: launch count/latency, D→H sync time (the CCL convergence flag read), memcpy volume
+# Layer A - eBPF: launch count/latency, D→H sync time (the CCL convergence flag read), memcpy volume
 CUDALIB=$(ldconfig -p | awk '/libcuda.so.1 /{print $NF; exit}')
 sudo bpftrace scripts/ebpf/cuda_launch_latency.bt -c "python bench/parsebench.py --dataset BGL --tier 2 --reps 1 --out /tmp/x.json"
 sudo bpftrace scripts/ebpf/cuda_sync_stalls.bt   -c "python bench/parsebench.py --dataset BGL --tier 2 --reps 1 --out /tmp/x.json"
 sudo funccount-bpfcc "$CUDALIB:cuMemcpy*" -d 60
 sudo offcputime-bpfcc -p $(pgrep -f parsebench.py | head -1) -f 30 > results/ebpf/offcpu.folded
 
-# Layer B — DCGM: is the GPU busy per stage? (1002 SM_ACTIVE 1005 DRAM_ACTIVE 1009/1010 PCIe)
+# Layer B - DCGM: is the GPU busy per stage? (1002 SM_ACTIVE 1005 DRAM_ACTIVE 1009/1010 PCIe)
 dcgmi dmon -e 1002,1003,1005,1009,1010,155 -d 100 > results/dcgm/BGL_t2.csv &
 python bench/parsebench.py --dataset BGL --tier 2 --reps 3 --out /tmp/x.json; kill %1
 
-# Layer C — Nsight Compute, per kernel (research box; needs NVreg_RestrictProfilingToAdminUsers=0)
+# Layer C - Nsight Compute, per kernel (research box; needs NVreg_RestrictProfilingToAdminUsers=0)
 ncu --set full --csv -k regex:"radix_|scan_|ccl_|similarity|consensus|hash_tokens" \
     --metrics dram__bytes_read.sum,dram__bytes_write.sum,lts__t_bytes.sum,sm__throughput.avg.pct_of_peak_sustained_elapsed,\
 smsp__average_warps_issue_stalled_long_scoreboard_per_issue_active.ratio,l1tex__t_sectors_pipe_lsu_mem_global_op_atom.sum \
@@ -580,7 +580,7 @@ smsp__average_warps_issue_stalled_long_scoreboard_per_issue_active.ratio,l1tex__
 nsys profile --stats=true -o results/nsys/BGL_t2 python bench/parsebench.py --dataset BGL --tier 2 --limit 1000000 --reps 1 --out /tmp/x.json
 ```
 
-The bpftrace scripts are identical to TriCluster's (`uprobe`/`uretprobe` on `cuLaunchKernel*`, `cu*Synchronize`, `cuMemcpyDtoH*`). What they tell you *here*: the CCL loop does one 4-byte D→H read per hook/compress round — layer A measures exactly what that costs, and it's the argument for the tier-2 change of checking convergence less often.
+The bpftrace scripts are identical to TriCluster's (`uprobe`/`uretprobe` on `cuLaunchKernel*`, `cu*Synchronize`, `cuMemcpyDtoH*`). What they tell you *here*: the CCL loop does one 4-byte D→H read per hook/compress round - layer A measures exactly what that costs, and it's the argument for the tier-2 change of checking convergence less often.
 
 Which layer answers what:
 
@@ -591,16 +591,16 @@ Which layer answers what:
 | Is PCIe the bottleneck for Thunderbird H2D? | B (1009/1010) + A (`cuMemcpyHtoD` time) |
 | Is the GPU idle while Python does the regex header split? | B (SM_ACTIVE gaps) → motivates the GPU header splitter |
 
-### Step 10 — Stage breakdown + roofline
+### Step 10 - Stage breakdown + roofline
 
-`model/stages.py` produces two figures: (1) stacked bars of stage time per dataset and tier; (2) lines/s vs input size (1M, 10M, full) per dataset, with the Drain3 line as a flat reference. `model/roofline.py` places each kernel (from ncu bytes + FLOP estimates) on the DRAM roofline — sort and scan sit near the bandwidth line, similarity sits low (latency/atomic-bound), which is the optimisation discussion in the paper.
+`model/stages.py` produces two figures: (1) stacked bars of stage time per dataset and tier; (2) lines/s vs input size (1M, 10M, full) per dataset, with the Drain3 line as a flat reference. `model/roofline.py` places each kernel (from ncu bytes + FLOP estimates) on the DRAM roofline - sort and scan sit near the bandwidth line, similarity sits low (latency/atomic-bound), which is the optimisation discussion in the paper.
 
 ```bash
 python model/stages.py results/$(nvidia-smi --query-gpu=name --format=csv,noheader | tr ' ' '_')
 python model/roofline.py results/ncu
 ```
 
-### Step 11 — Report, paper, release
+### Step 11 - Report, paper, release
 
 ```bash
 bash scripts/reproduce.sh            # get_data → drain3 baseline → tests → run_all → figures
@@ -613,7 +613,7 @@ git tag v1.0 && git push --tags      # Zenodo DOI
 
 ```mermaid
 gantt
-    title TriParseGPU — 8 weeks
+    title TriParseGPU - 8 weeks
     dateFormat YYYY-MM-DD
     section Setup
     Toolkit, env, data, Drain3 baseline (all)     :a1, 2026-09-14, 5d
@@ -645,16 +645,16 @@ gantt
 
 ## 5. Paper skeleton (IEEE, 8–10 pages)
 
-1. Introduction — parsing is the bottleneck under every log-analysis system; no GPU parser exists
-2. Background — Drain; why it's sequential; GPU primitives (sort, scan, CCL)
+1. Introduction - parsing is the bottleneck under every log-analysis system; no GPU parser exists
+2. Background - Drain; why it's sequential; GPU primitives (sort, scan, CCL)
 3. Batch-Drain: reformulating template mining as sort + similarity graph + connected components; proof sketch that a bounded similarity window plus transitive closure recovers Drain's clusters; discussion of order-independence
-4. TriParseGPU pipeline — eight stages, memory layout, streaming mode
-5. Hand-written vs library primitives — radix sort, scans, CCL; when hand-written wins (P7's question, answered with data)
-6. Accuracy — GA / PA / FGA on LogHub-2k (and 2.0) vs Drain3, Spell, and an LLM-based parser
-7. Performance — lines/s per dataset, stage breakdown, scaling to 211M lines, single-batch vs streaming
-8. Observability — Nsight for kernels; eBPF + DCGM recipe for production deployment
-9. Related work — log parsers; GPU string processing; RAPIDS
-10. Conclusion — TriCalRAG integration, TriGuardKernel next
+4. TriParseGPU pipeline - eight stages, memory layout, streaming mode
+5. Hand-written vs library primitives - radix sort, scans, CCL; when hand-written wins (P7's question, answered with data)
+6. Accuracy - GA / PA / FGA on LogHub-2k (and 2.0) vs Drain3, Spell, and an LLM-based parser
+7. Performance - lines/s per dataset, stage breakdown, scaling to 211M lines, single-batch vs streaming
+8. Observability - Nsight for kernels; eBPF + DCGM recipe for production deployment
+9. Related work - log parsers; GPU string processing; RAPIDS
+10. Conclusion - TriCalRAG integration, TriGuardKernel next
 
 Target venues: workshop first (AI-SPC / HiPC), then ICSE/ASE/FSE (A*, SE) or ICPE for the performance angle.
 
@@ -665,10 +665,10 @@ Target venues: workshop first (AI-SPC / HiPC), then ICSE/ASE/FSE (A*, SE) or ICP
 - **Order-dependence.** Sequential Drain assigns a line to the *first* cluster above threshold; batch CCL merges everything transitively. Expect a few templates to merge that Drain keeps apart. Measure it (parity ARI), explain it, and offer a `--max_component_len_spread` knob. This is a finding, not a bug.
 - **Edge explosion.** Buckets with thousands of near-identical lines produce O(window × lines) edges. Keep `window` at 32–128 and dedupe by representative: after the first CCL pass, re-run similarity only between component representatives.
 - **Wildcard rule.** Drain3's masking is regex; the GPU classifier is a digit-ratio heuristic. Make both configurable and report accuracy under identical masking to keep the comparison fair.
-- **Thunderbird memory.** 211M lines → ~30 GB raw + token arrays. Fits in 96 GB, but keep `tok_hash` at uint64 and offsets at int64 — int32 overflows past 2.1 B bytes.
+- **Thunderbird memory.** 211M lines → ~30 GB raw + token arrays. Fits in 96 GB, but keep `tok_hash` at uint64 and offsets at int64 - int32 overflows past 2.1 B bytes.
 - **Timing.** Exclude CPU file read from lines/s; report it separately. Lock clocks for every number in the paper.
 - **Convergence reads.** The CCL loop reads one int per round; batch two hook/compress rounds per read to halve syncs (layer A shows the gain).
-- **Don't compare to Drain3 with Python overhead only** — also run the Go port as a stronger CPU baseline, or reviewers will say the speedup is Python-vs-CUDA.
+- **Don't compare to Drain3 with Python overhead only** - also run the Go port as a stronger CPU baseline, or reviewers will say the speedup is Python-vs-CUDA.
 
 ---
 
