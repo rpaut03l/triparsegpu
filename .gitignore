@@ -4,5 +4,12 @@ logs/
 __pycache__/
 *.egg-info/
 .pytest_cache/
-results/**/*.json
-!results/baseline/summary.txt
+
+# large per-line dumps from the Drain3 baseline (23-39 MB each)
+results/baseline/*_full.json
+results/baseline/*_subset.json
+results/baseline/*_2k.json
+
+# nsys binaries
+results/nsys/*.nsys-rep
+results/nsys/*.sqlite
