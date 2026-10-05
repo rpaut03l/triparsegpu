@@ -1,0 +1,13 @@
+Attaching 5 probes...
+BGL          t2    1,000,000 lines  kernels   45,125,375 l/s (   994x)  gpu  39,323,134 l/s (  866x)  e2e   313,250 l/s  [CLOCKS NOT LOCKED]
+
+
+@launch_ns: 
+[4K, 8K)             246 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[8K, 16K)             19 |@@@@                                                |
+[16K, 32K)            43 |@@@@@@@@@                                           |
+[32K, 64K)             6 |@                                                   |
+
+@launch_total_us: 2832
+@launches: 314
+

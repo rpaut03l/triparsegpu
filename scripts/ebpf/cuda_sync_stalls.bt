@@ -1,0 +1,23 @@
+#!/usr/bin/env bpftrace
+uprobe::cudaMemcpy*,
+uprobe::cudaStreamSynchronize,
+uprobe::cudaDeviceSynchronize,
+uprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuMemcpy*
+{ @s[tid, probe] = nsecs; }
+
+uretprobe::cudaMemcpy*,
+uretprobe::cudaStreamSynchronize,
+uretprobe::cudaDeviceSynchronize,
+uretprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuMemcpy*
+/@s[tid, probe]/
+{
+    $d = nsecs - @s[tid, probe];
+    @calls[probe] = count();
+    @total_us[probe] = sum($d / 1000);
+    delete(@s[tid, probe]);
+}
+END {
+    printf("\n=== calls ===\n"); print(@calls);
+    printf("\n=== total microseconds ===\n"); print(@total_us);
+    clear(@s);
+}

@@ -1,0 +1,17 @@
+#!/usr/bin/env bpftrace
+// Layer A: how many kernel launches, and what each launch call costs the host.
+uprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuLaunchKernel,
+uprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuLaunchKernelEx
+{
+    @launches = count();
+    @t[tid] = nsecs;
+}
+uretprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuLaunchKernel,
+uretprobe:/lib/x86_64-linux-gnu/libcuda.so.1:cuLaunchKernelEx
+/@t[tid]/
+{
+    @launch_ns = hist(nsecs - @t[tid]);
+    @launch_total_us = sum((nsecs - @t[tid]) / 1000);
+    delete(@t[tid]);
+}
+END { clear(@t); }
