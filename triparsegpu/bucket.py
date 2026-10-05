@@ -35,8 +35,8 @@ def sort_lines(key, tier=1):
     if tier == 1:
         order = cp.argsort(key, kind="stable").astype(cp.int64)   # CUB radix sort
     else:
-        from triparsegpu.radix import radix_argsort_u64           # tier 2, hand-written
-        order = radix_argsort_u64(key)
+        from triparsegpu.radix import argsort as radix_argsort     # tier 2, hand-written
+        order = radix_argsort(key, bits_per_pass=8)
 
     sk = key[order]
     new_seg = cp.empty(sk.size, cp.bool_)
