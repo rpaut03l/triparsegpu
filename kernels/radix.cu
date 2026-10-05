@@ -34,6 +34,12 @@ extern "C" __global__ void radix_histogram(
 // Stable scatter. Each block re-counts its own digits, derives its local
 // starting offset from the scanned histogram, and ranks equal digits by their
 // position within the block so the sort stays stable.
+// Stable scatter with warp-level ranking.
+// Rank = (equal-digit threads earlier in my warp) + (equal-digit threads in
+// earlier warps of this tile). The first comes from a ballot; the second from
+// a small scan over per-warp digit counts held in shared memory.
+#define WARPS (TPB / 32)
+
 extern "C" __global__ void radix_scatter(
         const unsigned long long* __restrict__ keys_in,
         const long long* __restrict__ vals_in,
@@ -42,29 +48,47 @@ extern "C" __global__ void radix_scatter(
         unsigned long long* __restrict__ keys_out,
         long long* __restrict__ vals_out)
 {
-    __shared__ unsigned long long sk[TPB];
-    __shared__ long long sv[TPB];
+    __shared__ unsigned int warp_cnt[WARPS][RADIX];   // per-warp digit counts
 
-    const int t = threadIdx.x;
+    const int t    = threadIdx.x;
+    const int lane = t & 31;
+    const int warp = t >> 5;
     const long long i = blockIdx.x * (long long)blockDim.x + t;
     const bool active = (i < n);
 
-    sk[t] = active ? keys_in[i] : 0ULL;
-    sv[t] = active ? vals_in[i] : 0LL;
+    const unsigned long long key = active ? keys_in[i] : 0ULL;
+    const long long val = active ? vals_in[i] : 0LL;
+    const unsigned int d = active ? (unsigned int)((key >> shift) & RMASK) : 0u;
+
+    for (int q = t; q < WARPS * RADIX; q += blockDim.x)
+        ((unsigned int*)warp_cnt)[q] = 0u;
     __syncthreads();
 
-    if (!active) return;
-
-    const unsigned int d = (unsigned int)((sk[t] >> shift) & RMASK);
-
-    // stable rank: how many earlier threads in this tile share my digit
-    unsigned int rank = 0u;
-    for (int q = 0; q < t; ++q) {
-        const long long j = blockIdx.x * (long long)blockDim.x + q;
-        if (j < n && (unsigned int)((sk[q] >> shift) & RMASK) == d) ++rank;
+    // --- rank within my warp, among threads sharing my digit ---
+    unsigned int peers = 0xffffffffu;
+    #pragma unroll
+    for (int b = 0; b < RADIX_BITS; ++b) {
+        const unsigned int bit = (d >> b) & 1u;
+        const unsigned int mask = __ballot_sync(0xffffffffu, bit);
+        peers &= bit ? mask : ~mask;
     }
+    const unsigned int act = __ballot_sync(0xffffffffu, active);
+    peers &= act;
+    const unsigned int lane_rank = __popc(peers & ((1u << lane) - 1u));
+    const unsigned int peer_total = __popc(peers);
+    const int leader = __ffs(peers) - 1;
 
-    const long long dst = offsets[(long long)d * gridDim.x + blockIdx.x] + rank;
-    keys_out[dst] = sk[t];
-    vals_out[dst] = sv[t];
+    if (active && lane == leader) warp_cnt[warp][d] = peer_total;
+    __syncthreads();
+
+    // --- offset of my warp among earlier warps with the same digit ---
+    unsigned int warp_off = 0u;
+    if (active) for (int w = 0; w < warp; ++w) warp_off += warp_cnt[w][d];
+
+    if (active) {
+        const long long dst = offsets[(long long)d * gridDim.x + blockIdx.x]
+                            + warp_off + lane_rank;
+        keys_out[dst] = key;
+        vals_out[dst] = val;
+    }
 }
