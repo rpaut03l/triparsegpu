@@ -4,6 +4,7 @@ Tier 1 uses CuPy primitives (cumsum = scan, flatnonzero = compaction).
 Tier 2 will swap cumsum for kernels/scan.cu.
 """
 import cupy as cp
+from triparsegpu import scan as _scan
 
 
 def tokenize(buf, line_offs, tier=1):
@@ -37,7 +38,11 @@ def tokenize(buf, line_offs, tier=1):
 
     line_tok_count = cp.bincount(tok_line, minlength=nlines).astype(cp.int32)
     line_tok_offs = cp.empty(nlines + 1, cp.int64)
-    line_tok_offs[0] = 0
-    cp.cumsum(line_tok_count, dtype=cp.int64, out=line_tok_offs[1:])   # SCAN
+    if tier >= 2:
+        line_tok_offs[:-1] = _scan.exclusive_scan(line_tok_count)       # hand-written
+        line_tok_offs[-1] = line_tok_offs[-2] + line_tok_count[-1]
+    else:
+        line_tok_offs[0] = 0
+        cp.cumsum(line_tok_count, dtype=cp.int64, out=line_tok_offs[1:])
 
     return tok_start, tok_end, tok_line, line_tok_count, line_tok_offs

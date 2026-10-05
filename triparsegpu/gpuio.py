@@ -6,6 +6,7 @@ LogHub formats. The header is stripped by skipping K space-delimited fields.
 import numpy as np
 import cupy as cp
 from triparsegpu.compile import kernel
+from triparsegpu import scan as _scan
 
 _TPB = 256
 
@@ -35,14 +36,15 @@ def to_gpu_pinned(arr):
     return out
 
 
-def split_lines(gbuf):
+def split_lines(gbuf, tier=1):
     """Newline positions -> line_start / line_end arrays (end excludes '\\n')."""
     n = int(gbuf.size)
     flag = cp.empty(n, cp.uint8)
     k = kernel("split", "mark_newlines")
     k(((n + _TPB - 1) // _TPB,), (_TPB,), (gbuf, cp.int64(n), flag))
 
-    nl = cp.flatnonzero(flag).astype(cp.int64)        # index of each '\n'
+    nl = (_scan.compact(flag) if tier >= 2
+          else cp.flatnonzero(flag).astype(cp.int64))  # index of each '\n'
     line_start = cp.concatenate([cp.zeros(1, cp.int64), nl + 1])
     line_end = cp.concatenate([nl, cp.array([n], cp.int64)])
     # drop a trailing empty line when the file DOES end in '\n'

@@ -1,5 +1,4 @@
-dataset                       lines  templates      lines/s
-BGL_full                  4,747,963        206       45,418
-HDFS_full                11,175,629         34       54,545
-OpenStack_full              137,074         50       28,259
-Thunderbird_subset        2,000,000       1183        8,475
+BGL_full                  4,747,963 lines  1373 tpl      8,767 l/s
+HDFS_full                11,175,629 lines    51 tpl     79,919 l/s
+OpenStack_full              137,074 lines    56 tpl     31,795 l/s
+Thunderbird_subset        2,000,000 lines  5676 tpl      1,886 l/s
