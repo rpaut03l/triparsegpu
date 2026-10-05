@@ -9,11 +9,11 @@ case "${1:-lock}" in
     LOCK=$(( MAX * 85 / 100 ))     # 85% of max: sustainable without throttling
     echo "locking graphics clock to ${LOCK} MHz (max ${MAX})"
     sudo nvidia-smi -lgc "${LOCK},${LOCK}"
-    nvidia-smi --query-gpu=clocks.applications.graphics --format=csv
+    echo "export TRIPARSE_CLOCKS_LOCKED=1   # add to your shell before benchmarking"
     ;;
   unlock)
     sudo nvidia-smi -rgc
-    echo "clocks unlocked"
+    echo "clocks unlocked  (unset TRIPARSE_CLOCKS_LOCKED)"
     ;;
   *) echo "usage: $0 [lock|unlock]"; exit 1 ;;
 esac

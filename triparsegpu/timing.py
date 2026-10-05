@@ -32,14 +32,38 @@ def gpu_info():
     }
 
 
-def clocks_locked():
-    """True if graphics clocks are pinned (needed for paper-grade numbers)."""
+import os
+
+
+def clock_state():
+    """What the GPU clock is doing right now.
+
+    `clocks.applications.graphics` is deprecated on recent drivers, so we read
+    the current clock and the throttle reasons instead. When -lgc is active the
+    driver reports the SW_POWER_CAP / APPLICATIONS_CLOCKS_SETTING throttle
+    reason, which is the reliable signal.
+    """
     import subprocess
     try:
         out = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=clocks_throttle_reasons.sw_power_cap,"
-             "clocks.applications.graphics", "--format=csv,noheader"],
+            ["nvidia-smi",
+             "--query-gpu=clocks.current.graphics,clocks.max.graphics,"
+             "clocks_throttle_reasons.applications_clocks_setting",
+             "--format=csv,noheader,nounits"],
             text=True).strip()
-        return "[N/A]" not in out.split(",")[-1]
-    except Exception:
-        return False
+        cur, mx, reason = [x.strip() for x in out.split(",")]
+        # The throttle reason only shows under load, and the applications-clock
+        # field is deprecated on this driver. Record the raw numbers and let the
+        # caller note the lock explicitly; a flag that guesses is worse than none.
+        locked = reason.lower() in ("active", "1", "true")
+        # TRIPARSE_CLOCKS_LOCKED=1 is set by scripts/lock_clocks.sh so the
+        # recorded result states the methodology rather than inferring it.
+        declared = os.environ.get("TRIPARSE_CLOCKS_LOCKED") == "1"
+        return {"clock_mhz": int(cur) if cur.isdigit() else None,
+                "clock_max_mhz": int(mx) if mx.isdigit() else None,
+                "clocks_locked": declared or locked,
+                "clocks_locked_declared": declared,
+                "throttle_reason": reason}
+    except Exception as e:
+        return {"clock_mhz": None, "clock_max_mhz": None,
+                "clocks_locked": False, "throttle_reason": f"unavailable: {e}"}

@@ -72,7 +72,7 @@ def main():
         speedup_gpu=n / gpu_s / base,
         speedup_e2e=n / e2e_s / base,
         reps=a.reps, warmup=a.warmup,
-        clocks_locked=timing.clocks_locked(),
+        **timing.clock_state(),
         driver=subprocess.check_output(
             ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
             text=True).strip(),
