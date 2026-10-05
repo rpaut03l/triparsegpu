@@ -20,12 +20,12 @@ smsp__average_warps_issue_stalled_long_scoreboard_per_issue_active.ratio,\
 smsp__average_warps_issue_stalled_barrier_per_issue_active.ratio,\
 l1tex__t_sectors_pipe_lsu_mem_global_op_atom.sum \
   --page raw -o "results/ncu/$TAG" \
-  python bench/parsebench.py --dataset $D --tier $T --limit $L --reps 1 --warmup 0 --out /tmp/ncu.json \
+  python bench/parsebench.py --dataset $D --tier $T --limit $L --reps 1 --warmup 0 --out /tmp/tpg/ncu.json \
   2>&1 | tail -20
 
 echo "--- nsys (timeline) ---"
 nsys profile --stats=true -o "results/nsys/$TAG" --force-overwrite true \
-  python bench/parsebench.py --dataset $D --tier $T --limit $L --reps 3 --out /tmp/nsys.json \
+  python bench/parsebench.py --dataset $D --tier $T --limit $L --reps 3 --out /tmp/tpg/nsys.json \
   2>&1 | tail -30
 
 echo "done: results/ncu/$TAG  results/nsys/$TAG"
