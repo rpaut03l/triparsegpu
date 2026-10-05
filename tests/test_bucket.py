@@ -9,7 +9,7 @@ def _pipeline(D, n=None):
     buf_np, offs_np = io.to_buffer(contents)
     buf, offs = cp.asarray(buf_np), cp.asarray(offs_np)
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs)
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     key = bucket.bucket_keys(h, toffs, cnt)
     return contents, cnt, key, h, toffs
 
@@ -25,7 +25,7 @@ def test_identical_lines_get_identical_keys():
     buf_np, offs_np = io.to_buffer(contents)
     buf, offs = cp.asarray(buf_np), cp.asarray(offs_np)
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs)
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     key = bucket.bucket_keys(h, toffs, cnt)
     assert key[0] == key[1], "same template, different params -> same bucket"
 
@@ -35,7 +35,7 @@ def test_different_lengths_differ():
     buf_np, offs_np = io.to_buffer(contents)
     buf, offs = cp.asarray(buf_np), cp.asarray(offs_np)
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs)
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     key = bucket.bucket_keys(h, toffs, cnt)
     assert key[0] != key[1]
 

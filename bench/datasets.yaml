@@ -1,0 +1,16 @@
+BGL:
+  path: data/loghub/full_datasets/BGL/BGL.log
+  depth_tokens: 1
+  drain3_lines_per_s: 45418
+HDFS:
+  path: data/loghub/full_datasets/HDFS/HDFS.log
+  depth_tokens: 2
+  drain3_lines_per_s: 79919
+OpenStack:
+  path: data/loghub/full_datasets/openstack_normal2.log
+  depth_tokens: 2
+  drain3_lines_per_s: 31795
+Thunderbird:
+  path: data/loghub/full_datasets/Thunderbird_subset.log
+  depth_tokens: 1
+  drain3_lines_per_s: 8475

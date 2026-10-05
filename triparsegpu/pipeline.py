@@ -26,10 +26,10 @@ def parse(contents, tier=1, st=0.5, window=64, depth_tokens=2, timing=False):
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs, tier)
     mark("tokenize")
 
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     mark("hash")
 
-    key = bucket.bucket_keys(h, toffs, cnt, depth_tokens)
+    key = bucket.bucket_keys(bh, toffs, cnt, depth_tokens)
     order, s0, s1, sop = bucket.sort_lines(key, tier)
     mark("sort")
 

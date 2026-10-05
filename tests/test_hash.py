@@ -6,7 +6,7 @@ def _run(lines):
     buf_np, offs_np = io.to_buffer(lines)
     buf, offs = cp.asarray(buf_np), cp.asarray(offs_np)
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs)
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     toks = [bytes(buf_np[s:e]).decode("utf-8", "ignore")
             for s, e in zip(ts.get(), te.get())]
     return toks, h.get(), w.get()

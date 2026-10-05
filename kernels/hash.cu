@@ -10,7 +10,8 @@ extern "C" __global__ void hash_tokens(
         const long long* __restrict__ tend,
         long long ntok,
         unsigned long long* __restrict__ out_hash,
-        unsigned char* __restrict__ out_wild)
+        unsigned char* __restrict__ out_wild,
+        unsigned long long* __restrict__ out_bhash)
 {
     long long t = blockIdx.x * (long long)blockDim.x + threadIdx.x;
     if (t >= ntok) return;
@@ -59,5 +60,8 @@ extern "C" __global__ void hash_tokens(
     (void)digits; (void)dots; (void)alpha; (void)len;
 
     out_wild[t] = wild ? 1 : 0;
-    out_hash[t] = wild ? 0ULL : h;                   // 0 == <*>
+    out_hash[t] = wild ? 0ULL : h;              // for similarity + template text
+    // bucket hash: a token that merely CONTAINS a wildcard marker (blk_<*>,
+    // <*>f<*>bdd) must not split buckets, or every UUID becomes its own bucket.
+    out_bhash[t] = (wild || has_marker) ? 0ULL : h;                   // 0 == <*>
 }

@@ -49,7 +49,7 @@ def test_real_pipeline_vs_scipy(D):
     buf_np, offs_np = io.to_buffer(contents)
     buf, offs = cp.asarray(buf_np), cp.asarray(offs_np)
     ts, te, tl, cnt, toffs = tokenize.tokenize(buf, offs)
-    h, w = hashing.hash_tokens(buf, ts, te)
+    h, w, bh = hashing.hash_tokens(buf, ts, te)
     key = bucket.bucket_keys(h, toffs, cnt)
     order, s0, s1, sop = bucket.sort_lines(key)
     eu, ev, ne = cluster.similarity_edges(h, toffs, cnt, order, sop, s0, st=0.5, window=64)
