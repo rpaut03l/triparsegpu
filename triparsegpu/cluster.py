@@ -1,4 +1,4 @@
-"""Stages 5-6: similarity edges inside buckets, then connected components."""
+"""Stages 5-6: similarity edges inside buckets, then connected components. - Problem Statement - 3"""
 import cupy as cp
 from triparsegpu.compile import kernel
 
