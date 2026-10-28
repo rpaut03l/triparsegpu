@@ -13,3 +13,6 @@ results/baseline/*_2k.json
 # nsys binaries
 results/nsys/*.nsys-rep
 results/nsys/*.sqlite
+results/ncu/*.ncu-rep
+results/ncu/*.ncu-repz
+results/ncu/*.err
