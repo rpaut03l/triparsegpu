@@ -1,0 +1,41 @@
+--- checking the GPU is free ---
+pid, process_name
+--- ncu (per-kernel counters) ---
+usage: parsebench.py [-h] --dataset {BGL,HDFS,OpenStack,Thunderbird}
+                     [--tier {1,2}] [--limit LIMIT] [--st ST]
+                     [--window WINDOW] [--reps REPS] [--warmup WARMUP] --out
+                     OUT
+parsebench.py: error: argument --tier: invalid choice: 1000000 (choose from 1, 2)
+==ERROR== The application returned an error code (2).
+--- nsys (timeline) ---
+      9.5        1,025,019        273   3,754.6   3,756.0     1,823      6,900        856.3  open64             
+      5.0          535,097        457   1,170.9   1,092.0     1,001      9,434        555.9  fstat64            
+      3.6          391,121        250   1,564.5   1,432.0     1,011     10,887        747.3  close              
+      1.4          153,262         12  12,771.8  11,743.0     7,722     21,383      3,877.2  mmap64             
+      0.8           89,697         65   1,380.0   1,322.0     1,311      2,924        266.3  sigaction          
+      0.6           65,519         28   2,340.0   2,283.0     1,842      2,914        292.1  lstat64            
+      0.5           51,541         21   2,454.3   1,161.0     1,022     18,147      3,742.2  write              
+      0.3           30,445          6   5,074.2   3,595.0     2,274     10,215      3,380.2  fopen64            
+      0.2           22,274          7   3,182.0   3,185.0     1,632      4,337        817.3  getc               
+      0.1           15,373          2   7,686.5   7,686.5     5,408      9,965      3,222.3  pipe2              
+      0.1           15,164          5   3,032.8   1,883.0     1,072      8,824      3,260.2  fgets              
+      0.1           15,022          2   7,511.0   7,511.0     3,565     11,457      5,580.5  fread              
+      0.1           14,782          5   2,956.4   1,342.0     1,002      9,714      3,787.1  fcntl64            
+      0.1           13,420          2   6,710.0   6,710.0     5,989      7,431      1,019.6  pthread_cond_signal
+      0.1           13,380          1  13,380.0  13,380.0    13,380     13,380          0.0  waitpid            
+      0.1           11,277          5   2,255.4   2,414.0     1,071      3,596      1,033.4  fclose             
+      0.1           10,667          1  10,667.0  10,667.0    10,667     10,667          0.0  open               
+      0.1           10,216          1  10,216.0  10,216.0    10,216     10,216          0.0  munmap             
+      0.1            7,262          2   3,631.0   3,631.0     2,434      4,828      1,692.8  close_range        
+      0.1            6,039          3   2,013.0   1,822.0     1,743      2,474        401.2  dup2               
+      0.0            1,252          1   1,252.0   1,252.0     1,252      1,252          0.0  fdopen             
+      0.0            1,022          1   1,022.0   1,022.0     1,022      1,022          0.0  ioctl              
+
+[5/8] Executing 'cuda_api_sum' stats report
+[6/8] Executing 'cuda_gpu_kern_sum' stats report
+[7/8] Executing 'cuda_gpu_mem_time_sum' stats report
+[8/8] Executing 'cuda_gpu_mem_size_sum' stats report
+Generated:
+	/home/rohit/triparsegpu/results/nsys/BGL_t1000000_n1000000.nsys-rep
+	/home/rohit/triparsegpu/results/nsys/BGL_t1000000_n1000000.sqlite
+done: results/ncu/BGL_t1000000_n1000000  results/nsys/BGL_t1000000_n1000000
